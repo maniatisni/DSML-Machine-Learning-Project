@@ -146,7 +146,7 @@ def class_label_from_index(fine_category):
 # see also AUTOTUNE
 # the dataset is now "infinite"
 
-BATCH_SIZE = wandb.config.batch_size
+BATCH_SIZE = 128
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # https://www.tensorflow.org/guide/data_performance
 
 
@@ -181,6 +181,7 @@ def prepare(ds, shuffle=False, augment=False, batch_size = 128):
 
     # Use buffered prefecting on all datasets
     return ds.prefetch(buffer_size=AUTOTUNE)
+
 IMG_SIZE = 224
 resize_and_rescale = tf.keras.Sequential([
     layers.experimental.preprocessing.Resizing(IMG_SIZE, IMG_SIZE),
@@ -210,14 +211,14 @@ def train():
     # test_ds = test_ds.map(lambda x, y: (tf.image.resize(x, size), y))
 
     #For augmentation data preparation
-    train_ds = prepare(tf.data.Dataset.from_tensor_slices((x_train, y_train)), shuffle=True, augment=True)
+    train_ds = prepare(tf.data.Dataset.from_tensor_slices((x_train, y_train)), shuffle=True, augment=True,batch_size=wandb.config.batch_size)
     test_ds = prepare(tf.data.Dataset.from_tensor_slices((x_test, y_test)),batch_size=wandb.config.batch_size)
     val_ds = prepare(tf.data.Dataset.from_tensor_slices((x_val, y_val)),batch_size=wandb.config.batch_size)
 
 
     # Iniialize model with hyperparameters
     tf.keras.backend.clear_session()
-    model = xception_(wandb.config.dropout, wandb.config.fc1)
+    model = xception_(wandb.config.dropout)
     # Compile the model
     opt = tf.keras.optimizers.Adam(
         learning_rate=wandb.config.learning_rate)  # optimizer with different learning rate specified by config
@@ -238,7 +239,7 @@ def train():
 
 # transfer learning: VGG16 trained on ImageNet without the top layer
 
-def xception_(dropout=0.15,fc1=182):
+def xception_(dropout=0.15):
     base_model = tf.keras.applications.Xception(input_shape=(wandb.config.size, wandb.config.size, 3), include_top=False,
                                                 weights='imagenet')
 
