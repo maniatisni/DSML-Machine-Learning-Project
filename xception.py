@@ -31,17 +31,17 @@ sweep_config = {
         'learning_rate': {
             'values': [0.01, 0.005, 0.001, 0.0005, 0.0001]
         },
-        'fc1': {
-            'values': [32, 64, 128, 256, 512]
-        },
+        # 'fc1': {
+        #     'values': [32, 64, 128, 256, 512]
+        # },
         'dropout': {
-            'values': [0.1, 0.15, 0.2, 0.3, 0.4, 0.5]
+            'values': [0.15, 0.2, 0.3, 0.4]
         },
         'epochs': {
             'values': [10, 20, 30, 40, 50]
         },
         'size': {
-            'values': [75,120,224,256]
+            'values': [224,256,348]
         }
     }
 }
@@ -146,20 +146,50 @@ def class_label_from_index(fine_category):
 # see also AUTOTUNE
 # the dataset is now "infinite"
 
-BATCH_SIZE = 128
+BATCH_SIZE = wandb.config.batch_size
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # https://www.tensorflow.org/guide/data_performance
 
 
-def _input_fn(x, y, BATCH_SIZE):
-    ds = tf.data.Dataset.from_tensor_slices((x, y))
-    ds = ds.shuffle(buffer_size=data_size)
-    ds = ds.repeat()
-    ds = ds.batch(BATCH_SIZE)
-    ds = ds.prefetch(buffer_size=AUTOTUNE)
-    return ds
+# def _input_fn(x, y, BATCH_SIZE):
+#     ds = tf.data.Dataset.from_tensor_slices((x, y))
+#     ds = ds.shuffle(buffer_size=data_size)
+#     ds = ds.repeat()
+#     ds = ds.batch(BATCH_SIZE)
+#     ds = ds.prefetch(buffer_size=AUTOTUNE)
+#     return ds
 
 
 
+
+def prepare(ds, shuffle=False, augment=False, batch_size = 128):
+    # Resize and rescale all datasets
+    ds = ds.map(lambda x, y: (resize_and_rescale(x), y),
+                num_parallel_calls=AUTOTUNE)
+
+    if shuffle:
+        ds = ds.shuffle(data_size,seed=75)
+
+    ds.repeat()
+
+    # Batch all datasets
+    ds = ds.batch(batch_size)
+
+    # Use data augmentation only on the training set
+    if augment:
+        ds = ds.map(lambda x, y: (data_augmentation(x, training=True), y),
+                    num_parallel_calls=AUTOTUNE)
+
+    # Use buffered prefecting on all datasets
+    return ds.prefetch(buffer_size=AUTOTUNE)
+IMG_SIZE = 224
+resize_and_rescale = tf.keras.Sequential([
+    layers.experimental.preprocessing.Resizing(IMG_SIZE, IMG_SIZE),
+    layers.experimental.preprocessing.Rescaling(1. / 255)])
+data_augmentation = tf.keras.Sequential([
+    layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+    layers.experimental.preprocessing.RandomRotation(0.2),
+    layers.experimental.preprocessing.RandomHeight(3/32),
+    layers.experimental.preprocessing.RandomWidth(3/32)])
 
 def train():
     # Specify the hyperparameter to be tuned along with
@@ -167,15 +197,22 @@ def train():
 
     # Initialize wandb with a sample project name
     wandb.init(config=sweep_config)
-    size = (wandb.config.size, wandb.config.size)
+    global IMG_SIZE
+    IMG_SIZE = wandb.config.size
+    
+    
+    # train_ds = _input_fn(x_train, y_train, wandb.config.batch_size)  # PrefetchDataset object
+    # validation_ds = _input_fn(x_val, y_val, wandb.config.batch_size)  # PrefetchDataset object
+    # test_ds = _input_fn(x_test, y_test, wandb.config.batch_size)  # PrefetchDataset object
 
-    train_ds = _input_fn(x_train, y_train, wandb.config.batch_size)  # PrefetchDataset object
-    validation_ds = _input_fn(x_val, y_val, wandb.config.batch_size)  # PrefetchDataset object
-    test_ds = _input_fn(x_test, y_test, wandb.config.batch_size)  # PrefetchDataset object
+    # train_ds = train_ds.map(lambda x, y: (tf.image.resize(x, size), y))
+    # validation_ds = validation_ds.map(lambda x, y: (tf.image.resize(x, size), y))
+    # test_ds = test_ds.map(lambda x, y: (tf.image.resize(x, size), y))
 
-    train_ds = train_ds.map(lambda x, y: (tf.image.resize(x, size), y))
-    validation_ds = validation_ds.map(lambda x, y: (tf.image.resize(x, size), y))
-    test_ds = test_ds.map(lambda x, y: (tf.image.resize(x, size), y))
+    #For augmentation data preparation
+    train_ds = prepare(tf.data.Dataset.from_tensor_slices((x_train, y_train)), shuffle=True, augment=True)
+    test_ds = prepare(tf.data.Dataset.from_tensor_slices((x_test, y_test)),batch_size=wandb.config.batch_size)
+    val_ds = prepare(tf.data.Dataset.from_tensor_slices((x_val, y_val)),batch_size=wandb.config.batch_size)
 
 
     # Iniialize model with hyperparameters
