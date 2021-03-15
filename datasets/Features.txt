@@ -1,4 +1,4 @@
-1 - Lever position (lp) [ ]
+1 - Lever position (lp) []
 2 - Ship speed (v) [knots]
 3 - Gas Turbine shaft torque (GTT) [kN m]
 4 - Gas Turbine rate of revolutions (GTn) [rpm]
