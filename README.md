@@ -1,6 +1,6 @@
 # DSML-Machine-Learning-Project
-Team 75 Project: Regression - Convolutional Neural Networks
-Datasets: S12, B04
+Team 75 Project: Regression - Convolutional Neural Networks  
+Datasets: S12, B04  
 Team Seed for CIFAR-dataset: C=119
 
  - 1st Part (Dataset A) contains the notebook with the Exploratory Data Analysis and the mutliple experiments with the different kinds of regressors, regarding dataset **S12**. The dataset itself for this notebook can be found under /datasets/airfoil_self_noise.dat (more information https://archive.ics.uci.edu/ml/datasets/Airfoil+Self-Noise)
