@@ -1,7 +1,8 @@
 # DSML-Machine-Learning-Project
 ## Authors:  
-- Nikolaos Maniatis (03400097)
-- Philippos Mavrepis (03400098)
+Nikolaos Maniatis (03400097)
+Philippos Mavrepis (03400098)
+
 Team 75 Project: Regression - Convolutional Neural Networks  
 Datasets: S12, B04  
 Team Seed for CIFAR-dataset: C=119
